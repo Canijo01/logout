@@ -125,6 +125,7 @@ while True:
     print (now,"-", before)
     #Obtener informacion de las sessiones abiertas
     sessions_list = usersessionslist(headers,URL, domain,"","")
+    print(sessions_list.status_code)
     if sessions_list.status_code == requests.codes.ok:
         #print(json.dumps(json.loads(sessions_list.text),indent=4,sort_keys=True))
         sessions_text=json.loads(sessions_list.text)
