@@ -109,7 +109,7 @@ api_get = URL + "api/v2/domains/"
 params = {
     'name' : "%s"%(domain.upper())
 }
-### Obtener las sesiones abiertas en el dominio
+### Obtener el uri del dominio
 domain_get =  requests.get(api_get, headers=headers,params=params)
 #print(domain_get)
 if domain_get.status_code == requests.codes.ok:
@@ -118,18 +118,18 @@ if domain_get.status_code == requests.codes.ok:
     if domains_info["count"] > 0:
         for domains in domains_info["results"]:
             domain_uri=domains["uri"]
-
+#loop principal
 while True:
     now = datetime.datetime.now(datetime.timezone.utc)
     before = now - datetime.timedelta(days=days)
-
     print (now,"-", before)
-
+    #Obtener informacion de las sessiones abiertas
     sessions_list = usersessionslist(headers,URL, domain,"","")
     if sessions_list.status_code == requests.codes.ok:
         #print(json.dumps(json.loads(sessions_list.text),indent=4,sort_keys=True))
         sessions_text=json.loads(sessions_list.text)
         if sessions_text["count"] > 0:
+            print ("Sesiones de Usuario:%s" %sessions_text["count"])
             for session in sessions_text["results"]:
                 #
                 #print (session)
@@ -140,30 +140,33 @@ while True:
                 idle_session = True
                 enddate = session["start"]
                 closed =   (now - datetime.datetime.strptime(enddate+"Z","%Y-%m-%dT%H:%M:%S.%f%z"))
-                print( "Now %s - enddate %s"%(now,enddate))
-                print ("Closed:%s - segundos: %s"%(closed,closed.total_seconds()))
+                #print( "Now %s - enddate %s"%(now,enddate))
+                print ("\t Sesion: %s iniciada hace %s segundos"%(session["session_id"],closed.total_seconds()))
                 if  closed.total_seconds() <= idle:
                     idle_session = False
-                    print ( "Sesion no sobrepaso los segundos quedan: %s"%(idle - closed.total_seconds()))
+                    print ( "\t Sesion %s no sobrepaso el limite quedan: %s"%(session["session_id"],idle - closed.total_seconds()))
                 else:
                     for app in app_sessions:
                         if "appsession_end" not in app:
                         # If app session is still open then user session is not idle
                             idle_session = False
-                            print ("Hay sesiones activas")
+                            print ("\t Sesión %s tiene aplicaciones activas" % session["session_id"])
+                            break
                         else:
                             # Check how many seconds ago the session was closed
                             #now = datetime.datetime.now(datetime.timezone.utc)
                             enddate = datetime.datetime.strptime(app["appsession_end"],"%Y-%m-%dT%H:%M:%S.%f%z")
                             #print( "now %s - enddate %s"%(now,enddate))
                             closed = (now - enddate).total_seconds()
-                            #print ("closed = %s"%(closed))
+                            print ("closed = %s"%(closed))
                             # If app session was closed less then $idle seconds then it is still active
                             if (closed <= idle):
                                 idle_session = False
-                                print ("No hay sesiones activas quedan %s segundos"%(idle-closed))
+                                break
+                                #print ("\t La sesion %s no hay sesiones activas quedan %s segundos"%(session["session_id"],idle-closed))
 
+                #print ("\t Sesion: %s status:%s "%(session["session_id"],idle_session))
                 if idle_session == True :
                     closesession(headers,URL,session["session_id"])
-                    print ("cerrando sesion: %s"%(session["session_id"]))
+                    print ("\t Cerrando sesion: %s"%(session["session_id"]))
     time.sleep(delay)
