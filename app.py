@@ -26,10 +26,11 @@ if "TOKEN" in os.environ:
 ### DELAY ## Seconds between interactions ej. 60
 for secciones in config.sections():
     for variable in config.items(secciones):
+        dato = variable[1]
         if variable[0] in os.environ:
-            variable[1] = os.environ[variable[0]]
-        exec("%s=\"%s\"" % (variable[0], variable[1]))
-        print("%s=\"%s\"" % (variable[0], variable[1]))
+            dato = os.environ[variable[0]]
+        exec("%s=\"%s\"" % (variable[0], dato))
+        print("%s=\"%s\"" % (variable[0], dato))
 
 ### Headers para los restful API
 headers = {
