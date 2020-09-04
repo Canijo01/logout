@@ -2,6 +2,7 @@ import configparser
 import datetime
 import json
 import os
+import sys
 import time
 from funciones import *
 
@@ -13,7 +14,9 @@ leer_parametros = config.read("config.ini")
 if "TOKEN" in os.environ:
     token = os.environ['TOKEN']
     # print ("Token:%s"%token)
-
+else:
+    print("No esta definido el Token. Cerrando el programa")
+    sys.exit("No esta definido el Token en la variable de ambiente TOKEN")
 ### Convierte todas las tuples de cada sección de config.ini en variables
 ### la prioridad es primero la variable de ambiente y despues la definida en config.ini
 ### Las variables que se utilizan son:
