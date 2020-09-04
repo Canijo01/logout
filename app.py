@@ -95,23 +95,23 @@ while True:
                 else:
                     for app in app_sessions:
                         if "appsession_end" not in app:
-                        # If app session is still open then user session is not idle
+                            # If app session is still open then user session is not idle
                             idle_session = False
                         print("\t Sesión: %s tiene aplicaciones activas" % session["session_id"])
-                            break
-                        else:
-                            # Check how many seconds ago the session was closed
-                            enddate = datetime.datetime.strptime(app["appsession_end"], "%Y-%m-%dT%H:%M:%S.%f%z")
-                            closed = (now - enddate).total_seconds()
-                            # If app session was closed less then $idle seconds then it is still active
-                            if (closed <= int(idle)):
-                                idle_session = False
-                                print("\t Sessión: %s tiene una session aplicativa cerrada hace %s segundos" % (
+                        break
+                    else:
+                        # Check how many seconds ago the session was closed
+                        enddate = datetime.datetime.strptime(app["appsession_end"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                        closed = (now - enddate).total_seconds()
+                        # If app session was closed less then $idle seconds then it is still active
+                        if (closed <= int(idle)):
+                            idle_session = False
+                            print("\t Sessión: %s tiene una session aplicativa cerrada hace %s segundos" % (
                                 session["session_id"], closed))
-                                break
-                if idle_session == True:
-                    closesession(headers, url, session["session_id"])
-                    print("\t Cerrando sesion: %s" % (session["session_id"]))
+                            break
+            if idle_session == True:
+                closesession(headers, url, session["session_id"])
+                print("\t Cerrando sesion: %s" % (session["session_id"]))
     else:
         print("Error: %s en conexion al API. Fecha %s" % (sessions_list.status_code, now))
     time.sleep(int(delay))
