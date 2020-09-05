@@ -1,3 +1,4 @@
+import json
 import requests
 
 
@@ -41,5 +42,22 @@ def getappsessions(headers, URL, domain_uri, session_id, TS_from, TS_to, verify)
     }
     # print ("parametros %s"%(params))
     api_get = 'api/v2/indexer/'
-    api_list = requests.post(URL + api_get, headers=headers, data=params, verify=bool(verify))  # verify=False
+    api_list = requests.post(URL + api_get, headers=headers, data=params, verify=verify)  # verify=False
     return (api_list)
+
+def getdomainuri (headers, URL,domain):
+    domain_uri = ""
+    api_get =  "api/v2/domains/"
+    params = {
+        'name': "%s" % (domain.upper())
+    }
+    domain_get = requests.get(URL + api_get, headers=headers, params=params)
+    # print(domain_get)
+    if domain_get.status_code == requests.codes.ok:
+        print("Conexion inicial al API Ok", )
+        # print(json.dumps(json.loads(domain_get.text),indent=4,sort_keys=True))
+        domains_info = json.loads(domain_get.text)
+        if domains_info["count"] > 0:
+            for domains in domains_info["results"]:
+                domain_uri = domains["uri"]
+    return domain_uri

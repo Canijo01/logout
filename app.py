@@ -1,6 +1,5 @@
 import configparser
 import datetime
-import json
 import os
 import sys
 import time
@@ -8,7 +7,10 @@ from funciones import *
 
 ### Inicio del programa
 config = configparser.ConfigParser()
+### Esta linea es para conservar las mayusculas. Normalmente convierte a minusculas
+config.optionxform = str
 leer_parametros = config.read("config.ini")
+
 
 ### Acceso a la API
 if "TOKEN" in os.environ:
@@ -35,25 +37,21 @@ for secciones in config.sections():
         exec("%s=\"%s\"" % (variable[0], dato))
         print("%s=\"%s\"" % (variable[0], dato))
 
+DAYS=int(DAYS)
+DELAY=int(DELAY)
+IDLE=int(IDLE)
+VERIFY=bool(VERIFY)
+
 ### Headers para los restful API
 headers = {
     'Accept': 'application/json',
     'Authorization': "Token %s" % (token)
 }
-api_get = url + "api/v2/domains/"
-params = {
-    'name': "%s" % (domain.upper())
-}
+
 ### Obtener el uri del dominio
-domain_get = requests.get(api_get, headers=headers, params=params)
-# print(domain_get)
-if domain_get.status_code == requests.codes.ok:
-    print("Conexion inicial al API Ok", )
-    # print(json.dumps(json.loads(domain_get.text),indent=4,sort_keys=True))
-    domains_info = json.loads(domain_get.text)
-    if domains_info["count"] > 0:
-        for domains in domains_info["results"]:
-            domain_uri = domains["uri"]
+domain_uri = getdomainuri(headers, URL, DOMAIN)
+print(domain_uri)
+
 # loop principal
 # solicita las sesiones que estan activas
 # verifica si la sesion no sobrepasado el lapso en idle
@@ -64,10 +62,10 @@ if domain_get.status_code == requests.codes.ok:
 # cierra la sesion de usuario
 while True:
     now = datetime.datetime.now(datetime.timezone.utc)
-    before = now - datetime.timedelta(days=int(days))
+    before = now - datetime.timedelta(days=DAYS)
 
     # Obtener informacion de las sessiones activas
-    sessions_list = usersessionslist(headers, url, domain, "", "", bool(verify))
+    sessions_list = usersessionslist(headers, URL, DOMAIN, "", "", VERIFY)
 
     if sessions_list.status_code == requests.codes.ok:
         # print(json.dumps(json.loads(sessions_list.text),indent=4,sort_keys=True))
@@ -77,12 +75,12 @@ while True:
             for session in sessions_text["results"]:
                 app_sessions_list = getappsessions(
                     headers,
-                    url,
+                    URL,
                     domain_uri,
                     session["session_id"],
                     before,
                     now,
-                    bool(verify))
+                    VERIFY)
                 # print(json.dumps(json.loads(app_sessions_list.text), indent=4, sort_keys=True))
                 app_sessions_text = json.loads(app_sessions_list.text)
                 app_sessions = app_sessions_text
@@ -91,31 +89,32 @@ while True:
                 closed = (now - datetime.datetime.strptime(enddate + "Z", "%Y-%m-%dT%H:%M:%S.%f%z"))
                 # print( "Now %s - enddate %s"%(now,enddate))
                 print("\t Sesion: %s iniciada hace %s segundos" % (session["session_id"], closed.total_seconds()))
-                if closed.total_seconds() <= int(idle):
+                if closed.total_seconds() <= IDLE:
                     idle_session = False
                     print("\t Sesion %s no sobrepaso el limite quedan: %s"
-                          % (session["session_id"], int(idle) - closed.total_seconds())
+                          % (session["session_id"], IDLE - closed.total_seconds())
                           )
                 else:
                     for app in app_sessions:
                         if "appsession_end" not in app:
                             # If app session is still open then user session is not idle
                             idle_session = False
-                        print("\t Sesión: %s tiene aplicaciones activas" % session["session_id"])
-                        break
-                    else:
-                        # Check how many seconds ago the session was closed
-                        enddate = datetime.datetime.strptime(app["appsession_end"], "%Y-%m-%dT%H:%M:%S.%f%z")
-                        closed = (now - enddate).total_seconds()
+                            print("\t Sesión: %s tiene aplicaciones activas" % session["session_id"])
+                            break
+                        else:
+                            # Check how many seconds ago the session was closed
+                            print (app)
+                            enddate = datetime.datetime.strptime(app["appsession_end"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                            closed = (now - enddate).total_seconds()
                         # If app session was closed less then $idle seconds then it is still active
-                        if (closed <= int(idle)):
+                        if (closed <= IDLE):
                             idle_session = False
                             print("\t Sessión: %s tiene una session aplicativa cerrada hace %s segundos" % (
                                 session["session_id"], closed))
                             break
             if idle_session == True:
-                closesession(headers, url, session["session_id"])
+                closesession(headers, URL, session["session_id"])
                 print("\t Cerrando sesion: %s" % (session["session_id"]))
     else:
         print("Error: %s en conexion al API. Fecha %s" % (sessions_list.status_code, now))
-    time.sleep(int(delay))
+    time.sleep(DELAY)
